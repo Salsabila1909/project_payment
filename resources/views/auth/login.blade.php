@@ -4,7 +4,7 @@
 <head>
 	<!-- Basic Page Info -->
 	<meta charset="utf-8">
-	<title>Login | Started</title>
+	<title>Login | Sisment</title>
 
 	<!-- Site favicon -->
   <link rel="apple-touch-icon" sizes="180x180" href="{{url('assets-admin')}}/vendors/images/apple-touch-icon.png">
@@ -26,7 +26,7 @@
 		<div class="container-fluid d-flex justify-content-between align-items-center">
 			<div class="brand-logo">
 				<a href="/">
-					<img src="{{url('assets-admin')}}/vendors/images/started.svg" alt="">
+					<img src="{{url('assets-admin')}}/vendors/images/sisment.png" alt="">
 				</a>
 			</div>
 		</div>

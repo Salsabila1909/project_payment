@@ -3,7 +3,7 @@
 	<head>
 		<!-- Basic Page Info -->
 		<meta charset="utf-8" />
-		<title>Started</title>
+		<title>Sisment</title>
 
 		<!-- Site favicon -->
 		<link
@@ -117,7 +117,7 @@
 		<div class="pre-loader">
 			<div class="pre-loader-box">
 				<div class="loader-logo">
-					<img src="{{url('assets-admin')}}/vendors/images/started.svg" alt="" />
+					<img src="{{url('assets-admin')}}/vendors/images/sisment.png" alt="" />
 				</div>
 				<div class="loader-progress" id="progress_div">
 					<div class="bar" id="bar1"></div>
@@ -161,7 +161,6 @@
 							class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list"
 						>
 							<a class="dropdown-item" href="/admin/change"><i class="dw dw-password"></i> Ganti Password</a>
-							<a class="dropdown-item" href="#"><i class="dw dw-book"></i> Manual Book</a>
 							<a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault();
 	              document.getElementById('logout-form').submit();"><i class="dw dw-logout"></i> Log Out</a>
 							<form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
@@ -346,7 +345,7 @@
 		<div class="left-side-bar">
 			<div class="brand-logo">
 				<a href="/">
-					<img src="{{url('assets-admin')}}/vendors/images/started.svg" alt="" class="dark-logo" />
+					<img src="{{url('assets-admin')}}/vendors/images/sisment.png" alt="" class="dark-logo" />
 					<img
 						src="{{url('assets-admin')}}/vendors/images/strated-white.svg"
 						alt=""
@@ -360,21 +359,22 @@
 			<div class="menu-block customscroll">
 				<div class="sidebar-menu">
 					<ul id="accordion-menu">
-						<li>
-							<a href="/admin/home" class="dropdown-toggle no-arrow @if ($activePage == 'dashboard') active @endif">
-								<span class="micon bi bi-house"></span><span class="mtext">Dashboard</span>
-							</a>
-						</li>
-						<li class="dropdown">
-							<a href="javascript:;" class="dropdown-toggle">
-								<span class="micon dw dw-file"></span><span class="mtext">Data Master</span>
-							</a>
-							<ul class="submenu">
-								<li><a href="/admin/kategori" class="@if ($activePage == 'kategori') active @endif">Data Kategori</a></li>
-								<li><a href="/admin/jenis" class="@if ($activePage == 'jenis') active @endif">Data Jenis</a></li>
-							</ul>
-						</li>
-					</ul>
+					<li>
+						<a href="/admin/home" class="dropdown-toggle no-arrow @if($activePage=='dashboard') active @endif">
+							<span class="micon bi bi-house"></span><span class="mtext">Dashboard</span>
+						</a>
+					</li>
+					<li>
+						<a href="/admin/siswa" class="dropdown-toggle no-arrow @if($activePage=='siswa') active @endif">
+							<span class="micon bi bi-people"></span><span class="mtext">Data Siswa</span>
+						</a>
+					</li>
+					<li>
+						<a href="/admin/transaksi" class="dropdown-toggle no-arrow @if($activePage=='transaksi') active @endif">
+							<span class="micon dw dw-file"></span><span class="mtext">Data Transaksi</span>
+						</a>
+					</li>
+				</ul>
 				</div>
 			</div>
 		</div>
@@ -384,7 +384,7 @@
 			<div class="pd-ltr-20">
 				@yield('content')
 				<div class="footer-wrap pd-20 mb-20 card-box">
-					Started - Copyright © {{date('Y')}}
+					Sisment - Copyright © {{date('Y')}}
 					<a href="https://furgetech.com" style="text-decoration: none" target="_blank"
 						>Furgetech Theme</a
 					>
