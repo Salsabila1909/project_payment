@@ -12,11 +12,19 @@ class SiswaController extends Controller
     /* ===============================
      * READ DATA
      * =============================== */
-    public function read()
-    {
-        $siswa = Siswa::orderBy('id', 'DESC')->get();
-        return view('admin.siswa.index', compact('siswa'));
+    public function read(Request $request, $tgl = null)
+{
+    $query = Siswa::query();
+
+    if ($tgl) {
+        $query->whereDate('created_at', $tgl);
     }
+
+    $siswa = $query->orderBy('id', 'DESC')->get();
+
+    return view('admin.siswa.index', compact('siswa', 'tgl'));
+}
+
 
     public function add()
     {

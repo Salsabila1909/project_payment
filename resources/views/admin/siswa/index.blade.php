@@ -30,6 +30,29 @@
       </div>
       <hr>
 
+      <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="form-group mb-0">
+                    <label class="font-weight-bold">Filter Tanggal:</label>
+                    <input 
+                        type="date"
+                        class="form-control"
+                        value="{{ $tgl ?? date('Y-m-d') }}"
+                        max="{{ date('Y-m-d') }}"
+                        onchange="location = '{{ url('admin/siswa/filter') }}/'+this.value;"
+                    >
+
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label>&nbsp;</label>
+                <a href="/admin/siswa" class="btn btn-secondary btn-block">
+                    <i class="fa fa-refresh"></i> Reset
+                </a>
+            </div>
+        </div>
+        <hr>
+
       @if (session('error'))
       <div class="alert alert-danger">
          {{ session('error') }}

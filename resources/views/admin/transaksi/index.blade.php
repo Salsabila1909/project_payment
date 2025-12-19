@@ -31,6 +31,30 @@
          </div>
       </div>
       <hr>
+
+      <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="form-group mb-0">
+                    <label class="font-weight-bold">Filter Tanggal:</label>
+                    <input 
+                        type="date" 
+                        name="tgl" 
+                        required 
+                        class="form-control" 
+                        value="{{ request('tanggal') ?? (isset($tanggal) ? $tanggal : date('Y-m-d')) }}" 
+                        max="{{ date('Y-m-d') }}"
+                        onchange="location = '/admin/transaksi/filter/'+this.value;"
+                    >
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label>&nbsp;</label>
+                <a href="{{ route('transaksi.index') }}" class="btn btn-secondary btn-block">
+                    <i class="fa fa-refresh"></i> Reset
+                </a>
+            </div>
+        </div>
+        <hr>
       
       @if (session('error'))
       <div class="alert alert-danger">
@@ -81,6 +105,18 @@
                <td>{{ $transaksi->keterangan ?? '-' }}</td>
 
                <td class="text-center" width="18%">
+                 @if($transaksi->status === 'pending')
+                     <a href="{{ route('transaksi.scan', $transaksi->id) }}"
+                        class="btn btn-warning btn-xs"
+                        title="Scan Fingerprint">
+                        <i class="fa fa-spinner fa-spin"></i>
+                     </a>
+                  @else
+                     <button class="btn btn-secondary btn-xs"
+                        title="Sudah Terdaftar" disabled>
+                        <i class="fa fa-check-circle"></i>
+                     </button>
+                  @endif
                   <a href="{{ route('transaksi.edit', $transaksi->id) }}" class="btn btn-success btn-xs">
                      <i class="fa fa-edit"></i>
                   </a>

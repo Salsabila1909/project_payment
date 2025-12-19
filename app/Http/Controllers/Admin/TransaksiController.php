@@ -7,14 +7,27 @@ use App\Models\Transaksi;
 use App\Models\Siswa;
 use App\Models\RiwayatTransaksi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TransaksiController extends Controller
 {
-    public function index()
-    {
-        $data = Transaksi::with('siswa')->orderBy('id', 'DESC')->get();
-        return view('admin.transaksi.index', compact('data'));
+    // ============================
+    // LIST TRANSAKSI
+    // ============================
+    public function index(Request $request, $tanggal = null)
+{
+    $query = Transaksi::with('siswa');
+
+    // Tangkap tanggal dari URL parameter atau request biasa
+    $tgl = $tanggal ?? $request->tanggal;
+
+    if ($tgl) {
+        $query->whereDate('tanggal', $tgl);
     }
+
+    $data = $query->latest()->get();
+    return view('admin.transaksi.index', compact('data'));
+}
 
     // ============================
     // TOPUP
@@ -27,36 +40,45 @@ class TransaksiController extends Controller
 
     public function topupSubmit(Request $request)
     {
-        $siswa = Siswa::findOrFail($request->siswa_id);
-        $status = $siswa->fingerprint_id ? 'sukses' : 'pending';
-
-        // Insert Transaksi
-        $transaksi = Transaksi::create([
-            'siswa_id'   => $siswa->id,
-            'tanggal'    => $request->tanggal,       // ← BERUBAH: dari now() ke input form
-            'tipe'       => 'topup',
-            'jumlah'     => $request->jumlah,
-            'keterangan' => $request->keterangan,
-            'status'     => $status,
+        $request->validate([
+            'siswa_id'   => 'required|exists:siswa,id',
+            'jumlah'     => 'required|numeric|min:1000',
+            'tanggal'    => 'required|date',
+            'keterangan' => 'nullable|string'
         ]);
 
-        // Tambah ke Riwayat
-        RiwayatTransaksi::create([
-            'siswa_id' => $siswa->id,
-            'tipe'     => 'topup',
-            'nominal'  => $request->jumlah
-        ]);
+        DB::transaction(function () use ($request, &$transaksi) {
 
-        // Jika fingerprint sudah terdaftar — langsung tambahkan saldo
-        if ($status === 'sukses') {
-            $siswa->saldo += $request->jumlah;
-            $siswa->save();
+            $siswa  = Siswa::findOrFail($request->siswa_id);
+            $status = $siswa->fingerprint_id ? 'sukses' : 'pending';
 
-            return redirect()->route('transaksi.index')
-                ->with('success', 'Topup berhasil!');
-        }
+            // Simpan transaksi
+            $transaksi = Transaksi::create([
+                'siswa_id'   => $siswa->id,
+                'tanggal'    => $request->tanggal,
+                'tipe'       => 'topup',
+                'jumlah'     => $request->jumlah,
+                'keterangan' => $request->keterangan,
+                'status'     => $status,
+            ]);
 
-        return redirect()->route('transaksi.scan', $transaksi->id);
+            // Riwayat
+            RiwayatTransaksi::create([
+                'siswa_id'      => $siswa->id,
+                'transaksi_id'  => $transaksi->id,
+                'tipe'          => 'topup',
+                'nominal'       => $request->jumlah
+            ]);
+
+            // Update saldo hanya jika sukses
+            if ($status === 'sukses') {
+                $siswa->increment('saldo', $request->jumlah);
+            }
+        });
+
+        return $transaksi->status === 'sukses'
+            ? redirect()->route('transaksi.index')->with('success', 'Topup berhasil!')
+            : redirect()->route('transaksi.scan', $transaksi->id);
     }
 
     // ============================
@@ -70,40 +92,50 @@ class TransaksiController extends Controller
 
     public function pembelianSubmit(Request $request)
     {
-        $siswa = Siswa::findOrFail($request->siswa_id);
-        $status = $siswa->fingerprint_id ? 'sukses' : 'pending';
-
-        // Insert Transaksi Pembelian
-        $transaksi = Transaksi::create([
-            'siswa_id'   => $siswa->id,
-            'tanggal' => now(),
-            'tipe'       => 'pembelian',
-            'jumlah'     => $request->jumlah,
-            'keterangan' => $request->keterangan,
-            'status'     => $status,
+        $request->validate([
+            'siswa_id'   => 'required|exists:siswa,id',
+            'jumlah'     => 'required|numeric|min:1000',
+            'tanggal'    => 'required|date', // Tambahkan validasi tanggal
+            'keterangan' => 'nullable|string'
         ]);
 
-        // Insert ke Riwayat
-        RiwayatTransaksi::create([
-            'siswa_id' => $siswa->id,
-            'tipe'     => 'payment',
-            'nominal'  => $request->jumlah
-        ]);
+        DB::transaction(function () use ($request, &$transaksi) {
 
-        // Jika fingerprint cocok — langsung potong saldo
-        if ($status === 'sukses') {
-            $siswa->saldo -= $request->jumlah;
-            $siswa->save();
+            $siswa  = Siswa::findOrFail($request->siswa_id);
+            $status = $siswa->fingerprint_id ? 'sukses' : 'pending';
 
-            return redirect()->route('transaksi.index')
-                ->with('success', 'Pembelian berhasil!');
-        }
+            // Cegah saldo minus
+            if ($status === 'sukses' && $siswa->saldo < $request->jumlah) {
+                abort(400, 'Saldo tidak mencukupi!');
+            }
 
-        return redirect()->route('transaksi.scan', $transaksi->id);
+            $transaksi = Transaksi::create([
+                'siswa_id'   => $siswa->id,
+                'tanggal'    => $request->tanggal, // Gunakan input tanggal dari form, bukan now()
+                'tipe'       => 'pembelian',
+                'jumlah'     => $request->jumlah,
+                'keterangan' => $request->keterangan,
+                'status'     => $status,
+            ]);
+
+            RiwayatTransaksi::create([
+                'siswa_id'     => $siswa->id,
+                'transaksi_id' => $transaksi->id,
+                'tipe'         => 'payment',
+                'nominal'      => $request->jumlah
+            ]);
+
+            if ($status === 'sukses') {
+                $siswa->decrement('saldo', $request->jumlah);
+            }
+        });
+
+        return $transaksi->status === 'sukses'
+            ? redirect()->route('transaksi.index')->with('success', 'Pembelian berhasil!')
+            : redirect()->route('transaksi.scan', $transaksi->id);
     }
-
     // ============================
-    // SCAN FINGERPRINT
+    // SCAN & VERIFIKASI FINGERPRINT
     // ============================
     public function scanFingerprint($id)
     {
@@ -113,31 +145,42 @@ class TransaksiController extends Controller
 
     public function verifyFingerprint(Request $request, $id)
     {
-        $transaksi = Transaksi::findOrFail($id);
-        $siswa = Siswa::where('fingerprint_id', $request->finger_id)->first();
+        $request->validate([
+            'finger_id' => 'required'
+        ]);
 
-        if (!$siswa || $siswa->id != $transaksi->siswa_id) {
-            return back()->with('error', 'Fingerprint tidak cocok!');
-        }
+        DB::transaction(function () use ($request, $id) {
 
-        // Ubah status → sukses
-        $transaksi->update(['status' => 'sukses']);
+            $transaksi = Transaksi::findOrFail($id);
 
-        // Update saldo sesuai tipe
-        if ($transaksi->tipe == 'topup') {
-            $siswa->saldo += $transaksi->jumlah;
-        } else {
-            $siswa->saldo -= $transaksi->jumlah;
-        }
+            if ($transaksi->status === 'sukses') {
+                abort(400, 'Transaksi sudah diverifikasi!');
+            }
 
-        $siswa->save();
+            $siswa = Siswa::where('fingerprint_id', $request->finger_id)->first();
+
+            if (!$siswa || $siswa->id !== $transaksi->siswa_id) {
+                abort(403, 'Fingerprint tidak cocok!');
+            }
+
+            $transaksi->update(['status' => 'sukses']);
+
+            if ($transaksi->tipe === 'topup') {
+                $siswa->increment('saldo', $transaksi->jumlah);
+            } else {
+                if ($siswa->saldo < $transaksi->jumlah) {
+                    abort(400, 'Saldo tidak mencukupi!');
+                }
+                $siswa->decrement('saldo', $transaksi->jumlah);
+            }
+        });
 
         return redirect()->route('transaksi.index')
             ->with('success', 'Transaksi berhasil diverifikasi!');
     }
 
     // ============================
-    // EDIT & UPDATE TRANSAKSI
+    // EDIT & UPDATE
     // ============================
     public function edit($id)
     {
@@ -149,42 +192,42 @@ class TransaksiController extends Controller
 
     public function update(Request $request, $id)
     {
-        $transaksi = Transaksi::findOrFail($id);
+        $request->validate([
+            'siswa_id'   => 'required|exists:siswa,id',
+            'jumlah'     => 'required|numeric|min:1000',
+            'tanggal'    => 'required|date',
+            'tipe'       => 'required|in:topup,pembelian'
+        ]);
 
-        $transaksi->update(
-            $request->only('siswa_id', 'jumlah', 'keterangan', 'tipe', 'tanggal')
-        );
+        $transaksi = Transaksi::findOrFail($id);
+        $transaksi->update($request->only('siswa_id', 'jumlah', 'tanggal', 'tipe', 'keterangan'));
 
         return redirect()->route('transaksi.index')
-            ->with('success', 'Data transaksi berhasil diupdate!');
+            ->with('success', 'Transaksi berhasil diperbarui!');
     }
 
     // ============================
-    // HAPUS TRANSAKSI + PERBAIKI SALDO + HAPUS RIWAYAT
+    // DELETE + PERBAIKI SALDO
     // ============================
     public function delete($id)
     {
-        $transaksi = Transaksi::findOrFail($id);
-        $siswa = Siswa::findOrFail($transaksi->siswa_id);
+        DB::transaction(function () use ($id) {
 
-        if ($transaksi->status === 'sukses') {
+            $transaksi = Transaksi::findOrFail($id);
+            $siswa = Siswa::findOrFail($transaksi->siswa_id);
 
-            if ($transaksi->tipe === 'topup') {
-                $siswa->saldo -= $transaksi->jumlah;
-            } else {
-                $siswa->saldo += $transaksi->jumlah;
+            if ($transaksi->status === 'sukses') {
+                if ($transaksi->tipe === 'topup') {
+                    $siswa->decrement('saldo', $transaksi->jumlah);
+                } else {
+                    $siswa->increment('saldo', $transaksi->jumlah);
+                }
             }
 
-            $siswa->save();
-        }
+            RiwayatTransaksi::where('transaksi_id', $transaksi->id)->delete();
+            $transaksi->delete();
+        });
 
-        // Hapus riwayat transaksi
-        RiwayatTransaksi::where('siswa_id', $siswa->id)
-            ->where('nominal', $transaksi->jumlah)
-            ->delete();
-
-        $transaksi->delete();
-
-        return back()->with('success', 'Transaksi dihapus & saldo telah diperbaiki!');
+        return back()->with('success', 'Transaksi dihapus & saldo diperbaiki!');
     }
 }

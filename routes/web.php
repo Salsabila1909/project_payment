@@ -51,6 +51,8 @@ Route::prefix('admin/siswa')
         // READ
         Route::get('/', 'read')->name('read');
 
+        Route::get('/filter/{tanggal}', 'read')->name('filter');
+
         // ADD + CREATE
         Route::get('/add', 'add')->name('add');
         Route::post('/create', 'create')->name('create');
@@ -91,6 +93,7 @@ Route::prefix('admin/transaksi')
     ->group(function () {
 
         Route::get('/', 'index')->name('index');
+        Route::get('/filter/{tgl}', 'index')->name('filter');
         Route::get('/topup', 'topupForm')->name('topupForm');
         Route::post('/topup', 'topupSubmit')->name('topupSubmit');
 

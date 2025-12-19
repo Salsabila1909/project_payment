@@ -47,6 +47,11 @@
          </div>
 
          <div class="form-group">
+            <label>Tanggal</label>
+            <input type="date" name="tanggal" class="form-control" value="{{ date('Y-m-d') }}" required>
+         </div>
+
+         <div class="form-group">
             <label>Keterangan</label>
             <input type="text" name="keterangan" class="form-control" placeholder="Opsional">
          </div>
